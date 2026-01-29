@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Subscription Cost Calculator</title>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f4f7f6;
+        padding: 20px;
+        color: #333;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: #fff;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      h2 {
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 10px;
+        color: #007bff;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      select,
+      input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+        font-size: 16px;
+      }
+      .btn {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        background: #28a745;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        font-size: 18px;
+        cursor: pointer;
+        margin-top: 20px;
+      }
+      .btn:hover {
+        background: #218838;
+      }
+      .btn:disabled {
+        background-color: #ccc; /* Серый цвет */
+        cursor: not-allowed; /* Значок запрета */
+        color: #666;
+      }
+
+      .result-box {
+        margin-top: 30px;
+        padding: 20px;
+        background: #e9ecef;
+        border-radius: 4px;
+        border-left: 5px solid #007bff;
+        display: none;
+      }
+      .result-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #ccc;
+      }
+      .result-row:last-child {
+        border-bottom: none;
+        font-weight: bold;
+        font-size: 1.1em;
+        color: #000;
+      }
+      .result-value {
+        font-family: monospace;
+        font-size: 1.1em;
+      }
+
+      .debug-info {
+        margin-top: 20px;
+        font-size: 0.85em;
+        color: #666;
+        background: #fff;
+        padding: 10px;
+        border: 1px dashed #ccc;
+      }
+      .alert-warning {
+        color: #856404;
+        background-color: #fff3cd;
+        border-color: #ffeeba;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 10px;
+        display: none;
+      }
+
+      .layout-wrapper {
+        display: flex;
+        gap: 30px;
+        align-items: flex-start;
+      }
+
+      .input-column {
+        flex: 1;
+        min-width: 300px;
+      }
+
+      .result-box {
+        flex: 1;
+        margin-top: 0;
+      }
+
+      /* Custom file input styling */
+      .file-input-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+        width: 100%;
+      }
+
+      .file-input-wrapper input[type="file"] {
+        position: absolute;
+        left: -9999px;
+      }
+
+      .file-input-label {
+        display: block;
+        padding: 8px;
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        text-align: center;
+        color: #333;
+        font-size: 14px;
+        transition: background-color 0.3s;
+      }
+
+      .file-input-label:hover {
+        background-color: #f9f9f9;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Subscription Cost Calculator</h2>
+
+      <div
+        class="form-group"
+        style="
+          background: #fff3cd;
+          padding: 15px;
+          border: 1px dashed #eba434;
+          margin-bottom: 20px;
+        "
+      >
+        <label>📥 Select a file to upload the current price list</label>
+        <div class="file-input-wrapper">
+          <input
+            type="file"
+            id="fileInput"
+            accept=".xlsx, .xls"
+            onchange="handleFile(this)"
+          />
+          <label for="fileInput" class="file-input-label"
+            >Choose XLS, XLSX File</label
+          >
+        </div>
+        <div
+          id="fileStatus"
+          style="
+            font-size: 0.9em;
+            margin-top: 5px;
+            color: #666;
+            font-style: italic;
+          "
+        ></div>
+      </div>
+
+      <div class="layout-wrapper">
+        <div class="input-column">
+          <div class="form-group">
+            <label>Tariff Plan Type</label>
+            <select id="tariffType">
+              <option value="Mobile">Mobile</option>
+              <option value="Basic">Basic</option>
+              <option value="Standard">Standard</option>
+              <option value="Premium">Premium</option>
+              <option value="Corporate">Corporate</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Subscription Term, months</label>
+            <input
+              type="number"
+              id="subscriptionTerm"
+              min="1"
+              max="24"
+              step="1"
+              value="1"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Usage Region</label>
+            <select id="region">
+              <option value="Finland">Finland</option>
+              <option value="USA">USA</option>
+              <option value="Turkey">Turkey</option>
+              <option value="India">India</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Client Status</label>
+            <select id="clientStatus">
+              <option value="new">New client</option>
+              <option value="regular">Repeat purchase</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Extra Services</label>
+            <select id="coefficientForAdditionalService">
+              <option value="1">No Extra Slots</option>
+              <option value="1.1">Add Extra Member Slot</option>
+            </select>
+          </div>
+
+          <button id="calcBtn" class="btn" onclick="calculate()" disabled>
+            Upload file with actual price list
+          </button>
+        </div>
+
+        <div id="resultBox" class="result-box">
+          <h3>Calculation Results</h3>
+
+          <div class="result-row">
+            <span>Base Cost:</span>
+            <span class="result-value" id="resBase">0.00</span>
+          </div>
+
+          <div class="result-row" style="color: #dc3545">
+            <span>Discount (<span id="discountPercent">0.00</span>%):</span>
+            <span class="result-value" id="resDiscount">0.00</span>
+          </div>
+
+          <div
+            class="result-row"
+            style="
+              margin-top: 15px;
+              border-top: 2px solid #ccc;
+              padding-top: 10px;
+              font-weight: bold;
+            "
+          >
+            <span>Total to Pay:</span>
+            <span class="result-value" id="resTotal">0.00</span>
+          </div>
+          <div class="result-row">
+            <span>Including tax (<span id="vatPercent">0.00</span>%):</span>
+            <span class="result-value" id="resTax">0.00</span>
+          </div>
+
+          <div class="debug-info">
+            <div id="dbgDetails">
+              <strong>Debug Data:</strong><br />
+              - Plan Type: <span id="dbgPlan">0</span><br />
+              - Region: <span id="dbgRegion">0</span><br />
+              - Monthly Price: <span id="dbgPrice">0.00</span><br />
+              - Currency: <span id="dbgCurrency">0</span><br />
+              - Tax Rate: <span id="dbgTaxRate">0</span>%<br />
+              - Discount Rate: <span id="dbgDiscountRate">0</span>%<br />
+              - Extra Service Coefficient: <span id="dbgExtraService">0</span
+              ><br />
+            </div>
+
+            <span
+              id="dbgStatus"
+              style="
+                display: block;
+                margin-top: 5px;
+                color: #dc3545;
+                font-weight: bold;
+                font-size: 0.9em;
+              "
+            ></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ==========================================
+      // 1. REFERENCE DATA
+      // ==========================================
+
+      const VAT_RATES = {
+        Finland: 0.255,
+        USA: 0,
+        Turkey: 0.2,
+        India: 0.18,
+      };
+
+      const DISCOUNTS = {
+        newClient: 0.1, // 10%
+        regularClient: 0.0,
+      };
+
+      let PRICELIST = [];
+
+      // ==========================================
+      // 2. LOGIC FUNCTIONS
+      // ==========================================
+
+      // Format numbers for output
+      function formatCurrency(value, currency = "") {
+        return (
+          value.toLocaleString("ru-RU", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }) +
+          " " +
+          currency
+        );
+      }
+
+      // Find the required row in the price list
+      function findPriceEntry(plan, region) {
+        return PRICELIST.find((item) => {
+          return (
+            String(item.planType).trim().toLowerCase() ===
+              String(plan).trim().toLowerCase() &&
+            String(item.region).trim().toLowerCase() ===
+              String(region).trim().toLowerCase()
+          );
+        });
+      }
+
+      // Reset UI
+      function resetUI() {
+        const dbgDetails = document.getElementById("dbgDetails");
+        const dbgStatus = document.getElementById("dbgStatus");
+
+        if (dbgDetails) dbgDetails.style.display = "none";
+        if (dbgStatus) dbgStatus.textContent = "";
+
+        const fields = [
+          "resBase",
+          "resDiscount",
+          "discountPercent",
+          "resTax",
+          "vatPercent",
+          "resTotal",
+        ];
+
+        fields.forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = id.startsWith("res") ? "0.00" : "0";
+        });
+      }
+
+      // ==========================================
+      // 3. MAIN CALCULATION
+      // ==========================================
+
+      function calculate() {
+        resetUI();
+        // Collect data
+        const selectedPlan = document.getElementById("tariffType").value;
+        const months =
+          parseInt(document.getElementById("subscriptionTerm").value) || 1;
+        const selectedRegion = document.getElementById("region").value;
+        const clientStatus = document.getElementById("clientStatus").value;
+        const extraServiceCoeff = parseFloat(
+          document.getElementById("coefficientForAdditionalService").value,
+        );
+
+        const resultBox = document.getElementById("resultBox");
+        const dbgDetails = document.getElementById("dbgDetails");
+        const dbgStatus = document.getElementById("dbgStatus");
+
+        // Search for entry in PRICELIST
+        const entry = findPriceEntry(selectedPlan, selectedRegion);
+
+        // ERROR HANDLING
+        if (!entry) {
+          // Display a clear error message
+          dbgStatus.innerHTML = `❌ Error: The combination was not found in the price list <br> 
+								   Plan: <b>${selectedPlan}</b> + Region: <b>${selectedRegion}</b>. <br>
+								   Please check the file contents!`;
+
+          // Hide the results block since there's nothing to calculate
+          resultBox.style.display = "block";
+          dbgDetails.style.display = "none";
+          document.getElementById("resBase").textContent = "---";
+          document.getElementById("resDiscount").textContent = "---";
+          document.getElementById("resTax").textContent = "---";
+          document.getElementById("vatPercent").textContent = "---";
+          document.getElementById("discountPercent").textContent = "---";
+          document.getElementById("resTotal").textContent = "---";
+          return;
+        }
+
+        // Validate price in the found entry
+        if (isNaN(entry.price) || entry.price <= 0) {
+          dbgStatus.innerHTML = `❌ Error: Plan ${selectedPlan} has an incorrect price in the file.`;
+          resultBox.style.display = "block";
+          dbgDetails.style.display = "none";
+          return;
+        }
+
+        // If all is well, clear the error field and calculate
+        dbgStatus.textContent = "";
+        dbgDetails.style.display = "block";
+
+        // Math logic
+        const basePrice = entry.price * months;
+        const withOptions = basePrice * extraServiceCoeff;
+
+        // Discount
+        const discountRate =
+          clientStatus === "new"
+            ? DISCOUNTS.newClient
+            : DISCOUNTS.regularClient;
+        const discountAmount = withOptions * discountRate;
+        const totalAfterDiscount = withOptions - discountAmount;
+
+        // Tax (VAT)
+        const vatRate = VAT_RATES[selectedRegion] || 0;
+        const taxAmount =
+          totalAfterDiscount - totalAfterDiscount / (1 + vatRate);
+
+        // Output results to UI
+        document.getElementById("resBase").textContent = formatCurrency(
+          withOptions,
+          entry.currency,
+        );
+        document.getElementById("resDiscount").textContent =
+          "-" + formatCurrency(discountAmount, entry.currency);
+        document.getElementById("discountPercent").textContent = (
+          discountRate * 100
+        ).toFixed(0);
+        document.getElementById("vatPercent").textContent = (
+          vatRate * 100
+        ).toFixed(2);
+        document.getElementById("resTax").textContent = formatCurrency(
+          taxAmount,
+          entry.currency,
+        );
+        document.getElementById("resTotal").textContent = formatCurrency(
+          totalAfterDiscount,
+          entry.currency,
+        );
+
+        // Update debug panel
+        document.getElementById("dbgPlan").textContent = entry.planType;
+        document.getElementById("dbgRegion").textContent = entry.region;
+        document.getElementById("dbgPrice").textContent =
+          entry.price.toFixed(2);
+        document.getElementById("dbgCurrency").textContent = entry.currency;
+        document.getElementById("dbgTaxRate").textContent = (
+          vatRate * 100
+        ).toFixed(2);
+        document.getElementById("dbgDiscountRate").textContent = (
+          discountRate * 100
+        ).toFixed(2);
+        document.getElementById("dbgExtraService").textContent =
+          extraServiceCoeff.toFixed(2);
+
+        // Show results block
+        document.getElementById("resultBox").style.display = "block";
+      }
+
+      // Function to handle file with package offers
+      function handleFile(input) {
+        const file = input.files[0];
+        const btn = document.getElementById("calcBtn");
+        const statusDiv = document.getElementById("fileStatus");
+
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+
+            // Read all data as is, without filters
+            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+            if (jsonData.length > 0) {
+              // Save "raw" data to PRICELIST
+              // Convert keys to a unified format for search convenience, but don't remove rows
+              PRICELIST = jsonData.map((row) => {
+                return {
+                  planType: row["Plan Type"] || row["plan_type"] || "",
+                  region: row["Region"] || row["region"] || "",
+                  price: parseFloat(row["Monthly Price"] || row["price"]) || 0,
+                  currency: row["Currency"] || row["currency"] || "",
+                };
+              });
+
+              statusDiv.innerHTML = `✅ File accepted. Rows loaded: <b>${PRICELIST.length}</b>`;
+              statusDiv.style.color = "#28a745";
+
+              // Unlock the button in any case
+              btn.disabled = false;
+              btn.textContent = "Calculate Cost";
+            } else {
+              alert("File is empty");
+            }
+          } catch (error) {
+            console.error("Error reading file:", error);
+            statusDiv.innerHTML = "❌ File reading error";
+            statusDiv.style.color = "#dc3545";
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      }
+    </script>
+  </body>
+</html>
