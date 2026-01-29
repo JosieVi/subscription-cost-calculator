@@ -353,12 +353,6 @@
 
       // Reset UI
       function resetUI() {
-        const dbgDetails = document.getElementById("dbgDetails");
-        const dbgStatus = document.getElementById("dbgStatus");
-
-        if (dbgDetails) dbgDetails.style.display = "none";
-        if (dbgStatus) dbgStatus.textContent = "";
-
         const fields = [
           "resBase",
           "resDiscount",
@@ -399,6 +393,7 @@
 
         // ERROR HANDLING
         if (!entry) {
+          resetUI();
           // Display a clear error message
           dbgStatus.innerHTML = `❌ Error: The combination was not found in the price list <br> 
 								   Plan: <b>${selectedPlan}</b> + Region: <b>${selectedRegion}</b>. <br>
@@ -407,12 +402,6 @@
           // Hide the results block since there's nothing to calculate
           resultBox.style.display = "block";
           dbgDetails.style.display = "none";
-          document.getElementById("resBase").textContent = "---";
-          document.getElementById("resDiscount").textContent = "---";
-          document.getElementById("resTax").textContent = "---";
-          document.getElementById("vatPercent").textContent = "---";
-          document.getElementById("discountPercent").textContent = "---";
-          document.getElementById("resTotal").textContent = "---";
           return;
         }
 
