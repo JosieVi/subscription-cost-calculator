@@ -58,9 +58,8 @@
         background: #218838;
       }
       .btn:disabled {
-        background-color: #ccc; /* Серый цвет */
-        cursor: not-allowed; /* Значок запрета */
-        color: #666;
+        background-color: #ccc;
+        cursor: not-allowed;
       }
 
       .result-box {
@@ -123,7 +122,6 @@
         margin-top: 0;
       }
 
-      /* Custom file input styling */
       .file-input-wrapper {
         position: relative;
         overflow: hidden;
@@ -305,9 +303,7 @@
     </div>
 
     <script>
-      // ==========================================
-      // 1. REFERENCE DATA
-      // ==========================================
+      // Сonstants
 
       const VAT_RATES = {
         Finland: 0.255,
@@ -323,11 +319,8 @@
 
       let PRICELIST = [];
 
-      // ==========================================
-      // 2. LOGIC FUNCTIONS
-      // ==========================================
+      // Helpers
 
-      // Format numbers for output
       function formatCurrency(value, currency = "") {
         return (
           value.toLocaleString("ru-RU", {
@@ -339,7 +332,6 @@
         );
       }
 
-      // Find the required row in the price list
       function findPriceEntry(plan, region) {
         return PRICELIST.find((item) => {
           return (
@@ -351,7 +343,6 @@
         });
       }
 
-      // Reset UI
       function resetUI() {
         const fields = [
           "resBase",
@@ -368,13 +359,10 @@
         });
       }
 
-      // ==========================================
-      // 3. MAIN CALCULATION
-      // ==========================================
+      // Main logic
 
       function calculate() {
         resetUI();
-        // Collect data
         const selectedPlan = document.getElementById("tariffType").value;
         const months =
           parseInt(document.getElementById("subscriptionTerm").value) || 1;
@@ -388,24 +376,19 @@
         const dbgDetails = document.getElementById("dbgDetails");
         const dbgStatus = document.getElementById("dbgStatus");
 
-        // Search for entry in PRICELIST
         const entry = findPriceEntry(selectedPlan, selectedRegion);
 
-        // ERROR HANDLING
         if (!entry) {
           resetUI();
-          // Display a clear error message
           dbgStatus.innerHTML = `❌ Error: The combination was not found in the price list <br> 
 								   Plan: <b>${selectedPlan}</b> + Region: <b>${selectedRegion}</b>. <br>
 								   Please check the file contents!`;
 
-          // Hide the results block since there's nothing to calculate
           resultBox.style.display = "block";
           dbgDetails.style.display = "none";
           return;
         }
 
-        // Validate price in the found entry
         if (isNaN(entry.price) || entry.price <= 0) {
           dbgStatus.innerHTML = `❌ Error: Plan ${selectedPlan} has an incorrect price in the file.`;
           resultBox.style.display = "block";
@@ -413,15 +396,12 @@
           return;
         }
 
-        // If all is well, clear the error field and calculate
         dbgStatus.textContent = "";
         dbgDetails.style.display = "block";
 
-        // Math logic
         const basePrice = entry.price * months;
         const withOptions = basePrice * extraServiceCoeff;
 
-        // Discount
         const discountRate =
           clientStatus === "new"
             ? DISCOUNTS.newClient
@@ -429,12 +409,10 @@
         const discountAmount = withOptions * discountRate;
         const totalAfterDiscount = withOptions - discountAmount;
 
-        // Tax (VAT)
         const vatRate = VAT_RATES[selectedRegion] || 0;
         const taxAmount =
           totalAfterDiscount - totalAfterDiscount / (1 + vatRate);
 
-        // Output results to UI
         document.getElementById("resBase").textContent = formatCurrency(
           withOptions,
           entry.currency,
@@ -456,7 +434,6 @@
           entry.currency,
         );
 
-        // Update debug panel
         document.getElementById("dbgPlan").textContent = entry.planType;
         document.getElementById("dbgRegion").textContent = entry.region;
         document.getElementById("dbgPrice").textContent =
@@ -471,11 +448,57 @@
         document.getElementById("dbgExtraService").textContent =
           extraServiceCoeff.toFixed(2);
 
-        // Show results block
         document.getElementById("resultBox").style.display = "block";
       }
 
-      // Function to handle file with package offers
+      async function loadDefaultExcel() {
+        const btn = document.getElementById("calcBtn");
+        const statusDiv = document.getElementById("fileStatus");
+
+        try {
+          const response = await fetch("test_price.xlsx");
+
+          if (!response.ok) {
+            throw new Error("Default file not found on the server");
+          }
+
+          const arrayBuffer = await response.arrayBuffer();
+          const data = new Uint8Array(arrayBuffer);
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+
+          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+          if (jsonData.length > 0) {
+            PRICELIST = jsonData.map((row) => {
+              return {
+                planType: row["Plan Type"] || row["plan_type"] || "",
+                region: row["Region"] || row["region"] || "",
+                price: parseFloat(row["Monthly Price"] || row["price"]) || 0,
+                currency: row["Currency"] || row["currency"] || "",
+              };
+            });
+
+            statusDiv.innerHTML = `✅ Demo file accepted. Rows loaded: <b>${PRICELIST.length}</b>`;
+            statusDiv.style.color = "#28a745";
+
+            btn.disabled = false;
+            btn.textContent = "Calculate Cost";
+          } else {
+            alert("File is empty");
+          }
+        } catch (error) {
+          console.error("Error reading file:", error);
+          statusDiv.innerHTML = "❌ File reading error";
+          statusDiv.style.color = "#dc3545";
+        }
+      }
+
+      window.addEventListener("DOMContentLoaded", loadDefaultExcel);
+
+      /*
+      // Manual file upload fallback (kept for reference)
       function handleFile(input) {
         const file = input.files[0];
         const btn = document.getElementById("calcBtn");
@@ -491,12 +514,9 @@
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
 
-            // Read all data as is, without filters
             const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
             if (jsonData.length > 0) {
-              // Save "raw" data to PRICELIST
-              // Convert keys to a unified format for search convenience, but don't remove rows
               PRICELIST = jsonData.map((row) => {
                 return {
                   planType: row["Plan Type"] || row["plan_type"] || "",
@@ -509,7 +529,6 @@
               statusDiv.innerHTML = `✅ File accepted. Rows loaded: <b>${PRICELIST.length}</b>`;
               statusDiv.style.color = "#28a745";
 
-              // Unlock the button in any case
               btn.disabled = false;
               btn.textContent = "Calculate Cost";
             } else {
@@ -523,6 +542,7 @@
         };
         reader.readAsArrayBuffer(file);
       }
+      */
     </script>
   </body>
 </html>
