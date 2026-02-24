@@ -37,12 +37,16 @@ Create an Excel file (.xlsx or .xls) with the following columns:
 | Basic | USA | 12.00 | USD |
 | Premium | Turkey | 15.50 | TRY |
 
-### Step 2: Upload the File
+### Step 2: Automatic & Manual Price List Loading
 
-1. Click **"Choose XLS, XLSX File"** button
-2. Select your price list file
-3. Wait for the confirmation message: "✅ File accepted. Rows loaded: X"
-4. The **Calculate Cost** button will become active
+The calculator automatically attempts to load a `test_price.xlsx` file from the server on startup.
+
+- If the default file loads successfully, the **"Calculate Cost"** button will become active immediately.
+- If the default file is not found or you wish to use a different price list:
+  1. Click the **"Choose XLS, XLSX File"** button.
+  2. Select your custom price list file (.xlsx or .xls).
+  3. Wait for the confirmation message: "✅ File accepted. Rows loaded: X".
+  4. The **"Calculate Cost"** button will become active.
 
 ### Step 3: Configure Calculation Parameters
 
@@ -84,3 +88,17 @@ At the bottom of the results panel, you'll find debug data showing:
 - **Missing Combination Error** — If the selected plan and region don't exist in the file, you'll see: "❌ Error: The combination was not found in the price list"
 - **Invalid Price Error** — If a plan has an invalid or zero price, the calculator will display an error message
 - **Empty File Error** — The system alerts if the uploaded file contains no data
+
+### Fixed Rates & Discounts
+
+The calculator uses predefined rates for VAT and discounts:
+
+- **VAT Rates (Value Added Tax):**
+  - Finland: 25.5%
+  - USA: 0%
+  - Turkey: 20%
+  - India: 18%
+
+- **Client Status Discounts:**
+  - **New client:** 10% discount applied.
+  - **Repeat purchase:** No discount applied.
